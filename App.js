@@ -34,37 +34,10 @@ async function loadOrders() {
   try { const r = await window.storage.get(DB_KEY); return r ? JSON.parse(r.value) : []; }
   catch { return []; }
 }
-const handleSubmit = async () => {
-  // 1. Validation
-  if (!form.customerName || !form.email || !form.phone || !form.address || !form.deliveryDate) {
-    alert("Please fill in all required fields.");
-    return;
-  }
-  
-  setSubmitting(true);
-
-  // 2. Prepare Order Object
-  const order = {
-    ...form,
-    orderTimestamp: new Date().toISOString(),
-    orderStatus: "Pending",
-    orderId: "BB" + Date.now().toString().slice(-6)
-  };
-
-  // 3. Save to Online Database (via backend)
-  await handleSubmit(order);
-  
-  // 4. Cleanup
-  setSubmitting(false);
-  onOrderSubmit(order);
-  
-  // Reset form
-  setForm({ 
-    customerName: "", email: "", phone: "", address: "", 
-    brownieType: BROWNIES[0].name, quantity: 4, 
-    specialNotes: "", deliveryDate: "", paymentMethod: "COD" 
-  });
-};
+async function saveOrder(order) {
+  try { const o = await loadOrders(); o.unshift(order); await window.storage.set(DB_KEY, JSON.stringify(o)); }
+  catch(e) { console.error(e); }
+}
 
 /* ═══════════════════════════════════════════════════════
    PAYMENT UTILS
@@ -565,7 +538,7 @@ function OrderSection({ onOrderSubmit }) {
 
   const handleConfirm = async (txnRef) => {
     const order = { ...pendingOrder, txnRef, orderStatus: payMethod === "cod" ? "Pending" : "Payment Received" };
-    await handleSubmit(order);
+    await saveOrder(order);
     setShowModal(false);
     setPendingOrder(null);
     onOrderSubmit(order);
